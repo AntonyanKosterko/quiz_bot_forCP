@@ -1,5 +1,6 @@
 import logging
 import os
+import sqlite3
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from dotenv import load_dotenv
@@ -31,10 +32,24 @@ questions = [
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+# Функция для записи ответа пользователя в базу данных
+def log_user_answer(user_id, question, selected_option, correct):
+    conn = sqlite3.connect('quiz_bot.db')
+    c = conn.cursor()
+    c.execute('''
+    INSERT INTO user_answers (user_id, question, selected_option, correct)
+    VALUES (?, ?, ?, ?)
+    ''', (user_id, question, selected_option, correct))
+    conn.commit()
+    conn.close()
+
+
 # Обработчик команды /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     context.user_data['current_question'] = 0
     await ask_question(update, context)
+
 
 # Функция для отправки вопроса
 async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -48,6 +63,7 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     elif update.callback_query:
         await update.callback_query.message.reply_text(question["question"], reply_markup=reply_markup)
 
+
 # Обработчик выбора варианта ответа
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -55,11 +71,21 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     selected_option = int(query.data)
     current_question = context.user_data['current_question']
     correct_answer = questions[current_question]['answer']
-    
-    if selected_option == correct_answer:
+    user_id = query.from_user.id
+    question_text = questions[current_question]['question']
+    selected_text = questions[current_question]['options'][selected_option]
+    correct = int(selected_option == correct_answer)
+
+    print(user_id, question_text, selected_text, correct)
+
+    # Логируем ответ пользователя в базу данных
+    log_user_answer(user_id, question_text, selected_text, correct)
+
+    if correct:
         await query.edit_message_text(text="Correct!")
     else:
-        await query.edit_message_text(text=f"Wrong! The correct answer is {questions[current_question]['options'][correct_answer]}.")
+        await query.edit_message_text(
+            text=f"Wrong! The correct answer is {questions[current_question]['options'][correct_answer]}.")
 
     context.user_data['current_question'] += 1
 
@@ -68,9 +94,11 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     else:
         await query.message.reply_text("Quiz finished! Thanks for playing.")
 
+
 # Обработчик ошибок
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.warning('Update "%s" caused error "%s"', update, context.error)
+
 
 def main() -> None:
     # Создание экземпляра Application с использованием токена из переменной окружения
@@ -82,6 +110,7 @@ def main() -> None:
     application.add_error_handler(error)
 
     application.run_polling()
+
 
 if __name__ == '__main__':
     main()
