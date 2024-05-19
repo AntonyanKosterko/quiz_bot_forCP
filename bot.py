@@ -1,6 +1,12 @@
 import logging
+import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from dotenv import load_dotenv
+
+# Загрузка переменных окружения из файла .env
+load_dotenv()
+TOKEN = os.getenv('BOT_TOKEN')
 
 # Вопросы и ответы для квиза
 questions = [
@@ -67,8 +73,8 @@ async def error(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.warning('Update "%s" caused error "%s"', update, context.error)
 
 def main() -> None:
-    # Замените 'YOUR_API_TOKEN' на токен вашего бота
-    application = Application.builder().token("1730408100:AAEfYnkhWAQfQj7Vod-7TrWyb08UXkrMiEw").build()
+    # Создание экземпляра Application с использованием токена из переменной окружения
+    application = Application.builder().token(TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button))

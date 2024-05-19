@@ -1,1 +1,4 @@
 telegram
+python-dotenv
+python-telegram-bot
+dotenv

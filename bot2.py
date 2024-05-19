@@ -2,7 +2,7 @@ import telebot
 from pymongo import MongoClient
 
 
-bot = telebot.TeleBot("1900611774:AAHd_83i63kFcNbXb92q2Hmb3zX-Yc7qeVs")
+bot = telebot.TeleBot("abobe")
 
 
 class DataBase:
